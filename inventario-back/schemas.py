@@ -1,0 +1,42 @@
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+
+# ---------- ITEM ----------
+
+class ItemBase(BaseModel):
+    sku: str
+    ean13: str
+
+class ItemCreate(ItemBase):
+    quantity: int
+
+class ItemUpdate(BaseModel):
+    quantity: int
+
+class ItemOut(ItemBase):
+    id: int
+    quantity: int
+
+    class Config:
+        orm_mode = True
+
+
+# ---------- MOVEMENT ----------
+
+class MovementBase(BaseModel):
+    type: str  # 'entrada' o 'salida' o 'ajuste'
+    amount: int
+
+class MovementCreate(MovementBase):
+    item_id: int
+    username: Optional[str] = None  # nuevo campo opcional
+
+class MovementOut(MovementBase):
+    id: int
+    item_id: int
+    timestamp: datetime
+    username: Optional[str] = None  # nuevo campo opcional
+
+    class Config:
+        orm_mode = True
