@@ -32,11 +32,15 @@ class MovementCreate(MovementBase):
     item_id: int
     username: Optional[str] = None  # nuevo campo opcional
 
-class MovementOut(MovementBase):
+class MovementOut(BaseModel):
     id: int
     item_id: int
+    type: str
+    amount: int
     timestamp: datetime
-    username: Optional[str] = None  # nuevo campo opcional
+    username: Optional[str] = None
+    quantity_before: int
+    quantity_after: int
 
     class Config:
         orm_mode = True

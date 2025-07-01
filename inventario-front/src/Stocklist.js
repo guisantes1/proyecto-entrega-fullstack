@@ -15,34 +15,50 @@ function StockList() {
   }, []);
 
   const cargarItems = () => {
-    fetch(${API_URL}/items)
-      .then(res => res.json())
-      .then(data => setItems(data))
-      .catch(err => console.error('Error al cargar los items:', err));
+    fetch(`${API_URL}/items`)
+      .then(res => {
+        console.log('Respuesta fetch:', res);
+        if (!res.ok) throw new Error(`Error en fetch: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Datos recibidos:', data);
+        setItems(data);
+      })
+      .catch(err => {
+        console.error('Error al cargar items:', err);
+        alert('Error al cargar items. Mira la consola.');
+      });
   };
+  
 
   const actualizarCantidad = async (id, cantidadActual) => {
     const nuevaCantidad = prompt('Introduce la nueva cantidad:', cantidadActual);
     const cantidad = parseInt(nuevaCantidad);
-
+  
     if (isNaN(cantidad)) {
       alert('Cantidad no válida');
       return;
     }
-
+  
+    if (cantidad === cantidadActual) {
+      alert('La cantidad no ha cambiado');
+      return;
+    }
+  
     try {
-      const res = await fetch(${API_URL}/items/${id}, {
+      const res = await fetch(`${API_URL}/items/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: cantidad })
       });
-
+  
       if (!res.ok) {
         throw new Error('Error al actualizar');
       }
-
+  
       const actualizado = await res.json();
-
+  
       setItems(items.map(item => (item.id === id ? actualizado : item)));
       alert('Cantidad actualizada correctamente');
     } catch (err) {
@@ -50,6 +66,8 @@ function StockList() {
       alert('Error al actualizar la cantidad');
     }
   };
+  
+  
 
   const verHistorial = async (id) => {
     try {
@@ -63,9 +81,19 @@ function StockList() {
         const texto = historial.map(m => {
           const fechaMadrid = DateTime.fromISO(m.timestamp).setZone('Europe/Madrid').toFormat('d/M/yyyy HH:mm:ss');
           const unidades = Math.abs(m.amount);
-          const tipo = m.type.charAt(0).toUpperCase() + m.type.slice(1);
-          const usuario = m.user ? ` por ${m.user}` : '';
-          return `${tipo} de ${unidades} unidad${unidades !== 1 ? 'es' : ''} el ${fechaMadrid}${usuario}`;
+          const usuario = m.username ? ` por ${m.username}` : '';
+  
+          let tipoMovimiento;
+          let cantidades = '';
+  
+          if (m.type.toLowerCase() === 'creación') {
+            tipoMovimiento = 'Creación';
+          } else {
+            tipoMovimiento = m.amount > 0 ? 'Entrada' : 'Salida';
+            cantidades = ` (${m.quantity_before} -> ${m.quantity_after})`;
+          }
+  
+          return `${tipoMovimiento} de ${unidades} unidad${unidades !== 1 ? 'es' : ''} el ${fechaMadrid}${cantidades}${usuario}`;
         }).join('\n');
   
         alert(`Historial del producto:\n\n${texto}`);
@@ -76,14 +104,15 @@ function StockList() {
     }
   };
   
+  
 
   const eliminarProducto = async (id) => {
     if (!window.confirm("¿Seguro que quieres eliminar este producto? Se eliminarán también sus movimientos.")) return;
-
+  
     try {
-      const res = await fetch(${API_URL}/items/${id}, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/items/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error al eliminar");
-
+  
       setItems(items.filter(item => item.id !== id));
       alert("Producto eliminado correctamente");
     } catch (error) {
@@ -91,6 +120,7 @@ function StockList() {
       alert("Error al eliminar producto");
     }
   };
+  
 
   const añadirProducto = async () => {
     if (!newSku.trim() || !newEan13.trim() || !newQuantity.trim()) {
@@ -109,9 +139,9 @@ function StockList() {
       alert('Ya existe un producto con ese EAN13.');
       return;
     }
-
+  
     try {
-      const res = await fetch(${API_URL}/items, {
+      const res = await fetch(`${API_URL}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,96 +163,144 @@ function StockList() {
       alert('No se pudo añadir el producto');
     }
   };
-
+  
   return (
-    <div style={{ position: 'relative', padding: '20px' }}>
+    <div style={{ position: 'relative', padding: '20px', textAlign: 'center' }}>
       <h2>Listado de Inventario</h2>
-
-      {/* Botón + */}
-      <button
-        title="Añadir producto"
-        onClick={() => setShowAddModal(true)}
-        style={{
-          position: 'absolute',
-          top: 20,
-          right: 20,
-          fontSize: 24,
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          backgroundColor: '#4CAF50',
-          color: 'white',
-          border: 'none',
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
-      >
-        +
-      </button>
-
-      {/* Modal añadir */}
+  
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+        <table style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th>Historial</th>
+              <th>SKU</th>
+              <th>EAN13</th>
+              <th>Cantidad</th>
+              <th>Acción</th>
+              <th>Eliminar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id}>
+                <td>
+                  <button onClick={() => verHistorial(item.id)} title="Ver historial">⏳</button>
+                </td>
+                <td>{item.sku}</td>
+                <td>{item.ean13}</td>
+                <td>{item.quantity}</td>
+                <td>
+                  <button onClick={() => actualizarCantidad(item.id, item.quantity)} style={{ padding: '6px 12px' }}>
+                    Actualizar
+                  </button>
+                </td>
+                <td>
+                  <button
+                    onClick={() => eliminarProducto(item.id)}
+                    title="Eliminar producto"
+                    style={{ color: "red", fontWeight: "bold", fontSize: "18px", cursor: "pointer" }}
+                  >
+                    X
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+  
+      {/* Botón añadir */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+        <button
+          title="Añadir producto"
+          onClick={() => setShowAddModal(true)}
+          style={{
+            fontSize: 24,
+            width: 50,
+            height: 50,
+            borderRadius: '50%',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            userSelect: 'none',
+            boxShadow: '0 0 8px #4CAF50',
+          }}
+        >
+          +
+        </button>
+      </div>
+  
+      {/* Modal añadir (sin cambios) */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.3)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          zIndex: 9999,
-        }}>
-          <div style={{
-            backgroundColor: 'white', padding: 20, borderRadius: 8,
-            minWidth: 300,
-          }}>
-            <h3>Añadir nuevo producto</h3>
-            <label>SKU:</label><br />
-            <input value={newSku} onChange={e => setNewSku(e.target.value)} /><br />
-            <label>EAN13:</label><br />
-            <input value={newEan13} onChange={e => setNewEan13(e.target.value)} /><br />
-            <label>Cantidad inicial:</label><br />
-            <input type="number" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} /><br /><br />
-            <button onClick={añadirProducto} style={{ marginRight: 10 }}>Añadir</button>
-            <button onClick={() => setShowAddModal(false)}>Cancelar</button>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: 40,
+              borderRadius: 8,
+              minWidth: 400,
+              minHeight: 350,
+              fontSize: 16,
+            }}
+          >
+            <h3 style={{ marginBottom: 20 }}>Añadir nuevo producto</h3>
+  
+            <label style={{ marginBottom: 8, display: 'block' }}>SKU:</label>
+            <input
+              style={{ fontSize: 16, padding: 6, width: '100%', marginBottom: 16 }}
+              value={newSku}
+              onChange={(e) => setNewSku(e.target.value)}
+            />
+  
+            <label style={{ marginBottom: 8, display: 'block' }}>EAN13:</label>
+            <input
+              style={{ fontSize: 16, padding: 6, width: '100%', marginBottom: 16 }}
+              value={newEan13}
+              onChange={(e) => setNewEan13(e.target.value)}
+            />
+  
+            <label style={{ marginBottom: 8, display: 'block' }}>Cantidad inicial:</label>
+            <input
+              type="number"
+              style={{ fontSize: 16, padding: 6, width: '100%', marginBottom: 24 }}
+              value={newQuantity}
+              onChange={(e) => setNewQuantity(e.target.value)}
+            />
+  
+            <button
+              onClick={añadirProducto}
+              style={{ marginRight: 10, padding: '8px 16px', fontSize: 16, cursor: 'pointer' }}
+            >
+              Añadir
+            </button>
+            <button
+              onClick={() => setShowAddModal(false)}
+              style={{ padding: '8px 16px', fontSize: 16, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
-
-      <table style={{ margin: '0 auto' }}>
-        <thead>
-          <tr>
-            <th>Historial</th>
-            <th>SKU</th>
-            <th>EAN13</th>
-            <th>Cantidad</th>
-            <th>Acción</th>
-            <th>Eliminar</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.id}>
-              <td>
-                <button onClick={() => verHistorial(item.id)} title="Ver historial">⏳</button>
-              </td>
-              <td>{item.sku}</td>
-              <td>{item.ean13}</td>
-              <td>{item.quantity}</td>
-              <td>
-                <button onClick={() => actualizarCantidad(item.id, item.quantity)}>Actualizar</button>
-              </td>
-              <td>
-                <button
-                  onClick={() => eliminarProducto(item.id)}
-                  title="Eliminar producto"
-                  style={{ color: "red", fontWeight: "bold", fontSize: "18px", cursor: "pointer" }}
-                >
-                  X
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
+  
+  
+
 }
 
 export default StockList;
