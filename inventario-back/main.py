@@ -2,49 +2,46 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
-from models import Base, Item, Movement
+from models import Base, Item, Movement, User
+from auth import get_current_user
 import crud
-from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate
+from crud import reset_database
+from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate, UserCreate
 from datetime import datetime
 import pytz
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import JWTError, jwt
+from datetime import timedelta
 
-# Crear las tablas
+
+# Crear tablas
 Base.metadata.create_all(bind=engine)
 
-# Insertar datos de prueba si no existen y crear movimiento en log
-db = SessionLocal()
-if not db.query(Item).first():
-    items = [
-        Item(sku="SKU123", ean13="1234567890123", quantity=15),
-        Item(sku="SKU456", ean13="9876543210987", quantity=5),
-        Item(sku="SKU789", ean13="4567890123456", quantity=0),
-    ]
-    db.add_all(items)
-    db.commit()
+with SessionLocal() as db:
+    print("Checking DB tables...")
+    if (not db.query(Item).first()) or (not db.query(User).first()) or (not db.query(Movement).first()):
+        print("Tables empty or incomplete, resetting database")
+        reset_database(db)
+        print("Reset done")
+    else:
+        print("DB tables already have data")
 
-    # Añadir movimiento de creación con fecha y hora Madrid
-    madrid_tz = pytz.timezone('Europe/Madrid')
-    ahora_madrid = datetime.now(madrid_tz)
 
-    for item in items:
-        movimiento_creacion = Movement(
-            item_id=item.id,
-            type="creación",
-            amount=item.quantity,
-            timestamp=ahora_madrid,
-            username="sistema",
-            quantity_before=0,
-            quantity_after=item.quantity
-        )
-        db.add(movimiento_creacion)
-
-    db.commit()
-    print("Datos de prueba insertados y movimientos de creación añadidos")
-db.close()
 
 app = FastAPI()
 
-# (resto igual)
+SECRET_KEY = "clave-super-secreta"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def create_access_token(data: dict, expires_delta: timedelta):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 
 origins = [
@@ -72,8 +69,13 @@ def read_items(db: Session = Depends(get_db)):
     return crud.get_items(db)
 
 @app.put("/items/{item_id}", response_model=ItemOut)
-def update_item(item_id: int, item: ItemUpdate, db: Session = Depends(get_db)):
-    updated = crud.update_item_quantity(db, item_id, item, user=None)
+def update_item(
+    item_id: int,
+    item: ItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    updated = crud.update_item_quantity(db, item_id, item, user=current_user.username)
     if not updated:
         raise HTTPException(status_code=404, detail="Item not found")
     return updated
@@ -102,3 +104,38 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     if error:
         raise HTTPException(status_code=400, detail=error)
     return nuevo_item
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = crud.get_user_by_username(db, form_data.username)
+    if not user or not user.verify_password(form_data.password):
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    # Comprobar si alguna tabla está vacía y resetear si es necesario
+    tablas_vacias = (
+        not db.query(Item).first() or
+        not db.query(User).first() or
+        not db.query(Movement).first()
+    )
+    if tablas_vacias:
+        reset_database(db)
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=access_token_expires
+    )
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post("/reset")
+def reset_all(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.username != "admin":
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    reset_database(db)
+    return {"detail": "Base de datos reseteada correctamente"}
+

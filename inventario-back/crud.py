@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 from models import Item, Movement
-from schemas import ItemUpdate, MovementCreate, ItemCreate
+from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate, UserCreate
 from datetime import datetime
+from models import User
+from passlib.hash import bcrypt
 
 import pytz
 
@@ -12,33 +14,30 @@ def get_items(db: Session):
     return db.query(Item).all()
 
 
-def update_item_quantity(db: Session, item_id: int, item_update: ItemUpdate, user: str = None):
+def update_item_quantity(db: Session, item_id: int, item_data: ItemUpdate, user: str = None):
     item = db.query(Item).filter(Item.id == item_id).first()
-    if item is None:
+    if not item:
         return None
-    
-    quantity_before = item.quantity
-    quantity_after = item_update.quantity
 
-    # Actualizar cantidad
-    item.quantity = quantity_after
-    db.commit()
-    db.refresh(item)
+    cantidad_anterior = item.quantity
+    cantidad_nueva = item_data.quantity
+    diferencia = cantidad_nueva - cantidad_anterior
 
-    # Crear movimiento de tipo "ajuste" o similar
-    movement = Movement(
+    item.quantity = cantidad_nueva
+    db.add(item)
+
+    movimiento = Movement(
         item_id=item_id,
         type="ajuste",
-        amount=quantity_after - quantity_before,
-        timestamp=datetime.now(madrid_tz),  # hora Madrid
-        username=user,  # Cambiado de user a username
-        quantity_before=quantity_before,
-        quantity_after=quantity_after
+        amount=diferencia,
+        timestamp=datetime.now(pytz.timezone("Europe/Madrid")),
+        username=user, 
+        quantity_before=cantidad_anterior,
+        quantity_after=cantidad_nueva
     )
-    db.add(movement)
+    db.add(movimiento)
     db.commit()
-    db.refresh(movement)
-
+    db.refresh(item)
     return item
 
 
@@ -103,3 +102,55 @@ def create_item(db: Session, item_data: ItemCreate):
     db.commit()
 
     return nuevo_item, None
+
+
+
+def get_user_by_username(db, username: str):
+    return db.query(User).filter(User.username == username).first()
+
+def create_user(db, user_data):
+    hashed_pw = bcrypt.hash(user_data.password)
+    user = User(username=user_data.username, hashed_password=hashed_pw)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+
+def reset_database(db: Session):
+    print("Resetting database...")  # <- Añade esto
+
+    db.query(Movement).delete()
+    db.query(Item).delete()
+    db.query(User).delete()
+    db.commit()
+
+    usuarios_iniciales = ["admin", "guillem", "divain"]
+    for nombre in usuarios_iniciales:
+        create_user(db, UserCreate(username=nombre, password="1234"))
+
+    items = [
+        Item(sku="SKU123", ean13="1234567890123", quantity=15),
+        Item(sku="SKU456", ean13="9876543210987", quantity=5),
+        Item(sku="SKU789", ean13="4567890123456", quantity=0),
+    ]
+    db.add_all(items)
+    db.commit()
+
+    ahora = datetime.now(pytz.timezone("Europe/Madrid"))
+    for item in items:
+        movimiento = Movement(
+            item_id=item.id,
+            type="creación",
+            amount=item.quantity,
+            timestamp=ahora,
+            username="sistema",
+            quantity_before=0,
+            quantity_after=item.quantity
+        )
+        db.add(movimiento)
+
+    db.commit()
+    print("Database reset complete")  # <- Añade esto
+

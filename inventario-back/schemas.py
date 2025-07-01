@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
+
 # ---------- ITEM ----------
 
 class ItemBase(BaseModel):
@@ -44,3 +45,19 @@ class MovementOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+# ---------- USERS ----------
+
+from pydantic import BaseModel
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True  
+

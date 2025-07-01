@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 from schemas import ItemOut
+from passlib.hash import bcrypt
 
 
 class Item(Base):
@@ -28,3 +29,14 @@ class Movement(Base):
     quantity_after = Column(Integer)   # Existencias después
 
     item = relationship("Item", back_populates="movements")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+
+    def verify_password(self, password: str):
+        return bcrypt.verify(password, self.hashed_password)
+

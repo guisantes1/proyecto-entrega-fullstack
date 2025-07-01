@@ -15,7 +15,12 @@ function StockList() {
   }, []);
 
   const cargarItems = () => {
-    fetch(`${API_URL}/items`)
+    const token = localStorage.getItem("token");
+    fetch(`${API_URL}/items`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(res => {
         console.log('Respuesta fetch:', res);
         if (!res.ok) throw new Error(`Error en fetch: ${res.status}`);
@@ -47,11 +52,16 @@ function StockList() {
     }
   
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/items/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ quantity: cantidad })
       });
+
   
       if (!res.ok) {
         throw new Error('Error al actualizar');
@@ -71,9 +81,18 @@ function StockList() {
 
   const verHistorial = async (id) => {
     try {
-      const res = await fetch(`${API_URL}/movements`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/movements`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
       const data = await res.json();
       const historial = data.filter(mov => mov.item_id === id);
+  
+      // 🟨 Añade esto para inspeccionar los movimientos en consola
+      console.log("🟨 Movimientos recibidos:", historial);
   
       if (historial.length === 0) {
         alert('Este producto no tiene movimientos.');
@@ -105,12 +124,20 @@ function StockList() {
   };
   
   
+  
 
   const eliminarProducto = async (id) => {
     if (!window.confirm("¿Seguro que quieres eliminar este producto? Se eliminarán también sus movimientos.")) return;
   
     try {
-      const res = await fetch(`${API_URL}/items/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/items/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!res.ok) throw new Error("Error al eliminar");
   
       setItems(items.filter(item => item.id !== id));
@@ -141,15 +168,20 @@ function StockList() {
     }
   
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           sku: newSku,
           ean13: newEan13,
           quantity: parseInt(newQuantity)
         }),
       });
+
       if (!res.ok) throw new Error('Error al añadir producto');
       const productoCreado = await res.json();
       setItems([...items, productoCreado]);
@@ -167,45 +199,61 @@ function StockList() {
   return (
     <div style={{ position: 'relative', padding: '20px', textAlign: 'center' }}>
       <h2>Listado de Inventario</h2>
-  
+    
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-        <table style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Historial</th>
-              <th>SKU</th>
-              <th>EAN13</th>
-              <th>Cantidad</th>
-              <th>Acción</th>
-              <th>Eliminar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map(item => (
-              <tr key={item.id}>
-                <td>
-                  <button onClick={() => verHistorial(item.id)} title="Ver historial">⏳</button>
-                </td>
-                <td>{item.sku}</td>
-                <td>{item.ean13}</td>
-                <td>{item.quantity}</td>
-                <td>
-                  <button onClick={() => actualizarCantidad(item.id, item.quantity)} style={{ padding: '6px 12px' }}>
-                    Actualizar
-                  </button>
-                </td>
-                <td>
-                  <button
-                    onClick={() => eliminarProducto(item.id)}
-                    title="Eliminar producto"
-                    style={{ color: "red", fontWeight: "bold", fontSize: "18px", cursor: "pointer" }}
-                  >
-                    X
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+      <table style={{
+        borderCollapse: 'collapse',
+        fontSize: '18px',
+        width: '100%',
+        maxWidth: '900px',
+      }}>
+
+      <thead>
+        <tr>
+          <th style={{ padding: '12px' }}>Historial</th>
+          <th style={{ padding: '12px' }}>SKU</th>
+          <th style={{ padding: '12px' }}>EAN13</th>
+          <th style={{ padding: '12px' }}>Cantidad</th>
+          <th style={{ padding: '12px' }}>Acción</th>
+          <th style={{ padding: '12px' }}>Eliminar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map(item => (
+          <tr key={item.id}>
+            <td style={{ padding: '12px' }}>
+              <button onClick={() => verHistorial(item.id)} title="Ver historial" style={{ fontSize: '16px' }}>⏳</button>
+            </td>
+            <td style={{ padding: '12px' }}>{item.sku}</td>
+            <td style={{ padding: '12px' }}>{item.ean13}</td>
+            <td style={{ padding: '12px' }}>{item.quantity}</td>
+            <td style={{ padding: '12px' }}>
+              <button
+                onClick={() => actualizarCantidad(item.id, item.quantity)}
+                style={{ padding: '8px 16px', fontSize: '16px' }}
+              >
+                Actualizar
+              </button>
+            </td>
+            <td style={{ padding: '12px' }}>
+              <button
+                onClick={() => eliminarProducto(item.id)}
+                title="Eliminar producto"
+                style={{
+                  color: "red",
+                  fontWeight: "bold",
+                  fontSize: "18px",
+                  cursor: "pointer",
+                  padding: "4px 10px"
+                }}
+              >
+                X
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+
         </table>
       </div>
   
@@ -231,7 +279,7 @@ function StockList() {
         </button>
       </div>
   
-      {/* Modal añadir (sin cambios) */}
+      
       {showAddModal && (
         <div
           style={{
