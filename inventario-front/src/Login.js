@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./Login.css";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -36,53 +37,22 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        backgroundColor: "transparent",
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "480px",
-          padding: "50px 40px",
-          border: "1px solid #ccc",
-          borderRadius: "20px",
-          textAlign: "center",
-          fontFamily: "sans-serif",
-          backgroundColor: "#fff",
-          boxShadow: "0 6px 18px rgba(0, 0, 0, 0.2)",
-        }}
-      >
+    <div className="login-container">
+      <form onSubmit={handleSubmit} className="login-form">
         <img
           src="/divain_team.png"
           alt="Divain logo"
-          style={{
-            width: "200px",
-            marginBottom: "30px",
-          }}
+          className="login-logo"
         />
 
-        <h2 style={{ marginBottom: "30px", fontSize: "28px" }}>Iniciar sesión</h2>
+        <h2 className="login-title">Iniciar sesión</h2>
 
         <input
           type="text"
           placeholder="Usuario"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "14px",
-            marginBottom: "20px",
-            fontSize: "18px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            boxSizing: "border-box",
-          }}
+          className="login-input"
         />
 
         <input
@@ -90,31 +60,10 @@ export default function Login({ onLogin }) {
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "14px",
-            marginBottom: "25px",
-            fontSize: "18px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            boxSizing: "border-box",
-          }}
+          className="login-input password"
         />
 
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: "14px",
-            fontSize: "18px",
-            backgroundColor: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
+        <button type="submit" className="login-button">
           Entrar
         </button>
       </form>

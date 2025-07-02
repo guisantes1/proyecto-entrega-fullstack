@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Login from "./Login";
 import StockList from "./StockList";
+import './App.css';   
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -28,70 +29,36 @@ function App() {
   };
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", height: "100%" }}>
+    <div className="App-container">
+      
       <div
-        style={{
-          backgroundImage: 'url("/divain_logo.jpeg")',
-          backgroundRepeat: "repeat",
-          backgroundSize: "120px",
-          opacity: 0.05,
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-        }}
+        className="App-background"
+        style={{ backgroundImage: `url('/divain_logo.jpeg')` }}
       />
 
+    
+      <main className="App-main">
 
-      <main
-        style={{
-          position: "relative",
-          zIndex: 1,
-          padding: "20px",
-          minHeight: "100vh", // asegura altura para contenido
-        }}
-      >
         {isAuthenticated ? (
           <>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "flex-end", 
-              alignItems: "center", 
-              gap: "20px", 
-              marginBottom: "25px" 
-            }}>
-              <span style={{ fontSize: "20px", fontWeight: "600" }}>
-                Hola, {username}
-              </span>
+            <div className="App-header-bar">
+
+              <span className="App-username">Hola, {username}</span>
 
               <button
                 onClick={() => setShowChangePassword(true)}
-                style={{
-                  fontSize: "16px",
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                  border: "1px solid #90caf9",
-                  borderRadius: "6px",
-                  backgroundColor: "#e3f2fd",
-                  fontWeight: "500",
-                }}
+                className="Btn-change-password"
               >
                 Cambiar contraseña
               </button>
 
               <button
                 onClick={handleLogout}
-                style={{
-                  fontSize: "16px",
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                  border: "1px solid #ccc",
-                  borderRadius: "6px",
-                  backgroundColor: "#f5f5f5",
-                  fontWeight: "500",
-                }}
+                className="Btn-logout"
               >
                 Cerrar sesión
               </button>
+
             </div>
 
 
@@ -100,6 +67,7 @@ function App() {
         ) : (
           <Login onLogin={handleLogin} />
         )}
+        
         {showChangePassword && (
           <div style={{
             position: 'fixed',
