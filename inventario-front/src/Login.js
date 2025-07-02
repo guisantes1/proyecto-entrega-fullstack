@@ -23,8 +23,9 @@ export default function Login({ onLogin }) {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem("token", data.access_token);
-        localStorage.setItem("username", username); // 👈 Guarda también el nombre de usuario
-        onLogin(); // cambia a la vista de inventario
+        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+        localStorage.setItem("username", payload.sub);
+        onLogin();
       } else {
         alert("Usuario o contraseña incorrectos");
       }
@@ -35,69 +36,88 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
       style={{
-        width: "320px",
-        margin: "100px auto",
-        padding: "30px",
-        border: "1px solid #ccc",
-        borderRadius: "12px",
-        textAlign: "center",
-        fontFamily: "sans-serif",
-        backgroundColor: "#fff",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        backgroundColor: "transparent",
       }}
     >
-      <h2 style={{ marginBottom: "20px" }}>Iniciar sesión</h2>
-
-      <input
-        type="text"
-        placeholder="Usuario"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
+      <form
+        onSubmit={handleSubmit}
         style={{
-          width: "100%",
-          padding: "10px",
-          marginBottom: "15px",
-          fontSize: "16px",
+          width: "480px",
+          padding: "50px 40px",
           border: "1px solid #ccc",
-          borderRadius: "4px",
-          boxSizing: "border-box",
-        }}
-      />
-
-      <input
-        type="password"
-        placeholder="Contraseña"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          marginBottom: "20px",
-          fontSize: "16px",
-          border: "1px solid #ccc",
-          borderRadius: "4px",
-          boxSizing: "border-box",
-        }}
-      />
-
-      <button
-        type="submit"
-        style={{
-          width: "100%",
-          padding: "10px",
-          fontSize: "16px",
-          backgroundColor: "#4CAF50",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
+          borderRadius: "20px",
+          textAlign: "center",
+          fontFamily: "sans-serif",
+          backgroundColor: "#fff",
+          boxShadow: "0 6px 18px rgba(0, 0, 0, 0.2)",
         }}
       >
-        Entrar
-      </button>
-    </form>
+        <img
+          src="/divain_team.png"
+          alt="Divain logo"
+          style={{
+            width: "200px",
+            marginBottom: "30px",
+          }}
+        />
+
+        <h2 style={{ marginBottom: "30px", fontSize: "28px" }}>Iniciar sesión</h2>
+
+        <input
+          type="text"
+          placeholder="Usuario"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "14px",
+            marginBottom: "20px",
+            fontSize: "18px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            boxSizing: "border-box",
+          }}
+        />
+
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "14px",
+            marginBottom: "25px",
+            fontSize: "18px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            boxSizing: "border-box",
+          }}
+        />
+
+        <button
+          type="submit"
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: "18px",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          Entrar
+        </button>
+      </form>
+    </div>
   );
 }

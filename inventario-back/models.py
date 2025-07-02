@@ -3,8 +3,8 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 from schemas import ItemOut
-from passlib.hash import bcrypt
 
+from security import pwd_context
 
 class Item(Base):
     __tablename__ = "items"
@@ -38,5 +38,5 @@ class User(Base):
     hashed_password = Column(String)
 
     def verify_password(self, password: str):
-        return bcrypt.verify(password, self.hashed_password)
+        return pwd_context.verify(password, self.hashed_password)
 

@@ -22,12 +22,10 @@ function StockList() {
       },
     })
       .then(res => {
-        console.log('Respuesta fetch:', res);
         if (!res.ok) throw new Error(`Error en fetch: ${res.status}`);
         return res.json();
       })
       .then(data => {
-        console.log('Datos recibidos:', data);
         setItems(data);
       })
       .catch(err => {
@@ -35,22 +33,21 @@ function StockList() {
         alert('Error al cargar items. Mira la consola.');
       });
   };
-  
 
   const actualizarCantidad = async (id, cantidadActual) => {
     const nuevaCantidad = prompt('Introduce la nueva cantidad:', cantidadActual);
     const cantidad = parseInt(nuevaCantidad);
-  
+
     if (isNaN(cantidad)) {
       alert('Cantidad no válida');
       return;
     }
-  
+
     if (cantidad === cantidadActual) {
       alert('La cantidad no ha cambiado');
       return;
     }
-  
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/items/${id}`, {
@@ -62,13 +59,12 @@ function StockList() {
         body: JSON.stringify({ quantity: cantidad })
       });
 
-  
       if (!res.ok) {
         throw new Error('Error al actualizar');
       }
-  
+
       const actualizado = await res.json();
-  
+
       setItems(items.map(item => (item.id === id ? actualizado : item)));
       alert('Cantidad actualizada correctamente');
     } catch (err) {
@@ -76,8 +72,6 @@ function StockList() {
       alert('Error al actualizar la cantidad');
     }
   };
-  
-  
 
   const verHistorial = async (id) => {
     try {
@@ -87,13 +81,10 @@ function StockList() {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       const data = await res.json();
       const historial = data.filter(mov => mov.item_id === id);
-  
-      // 🟨 Añade esto para inspeccionar los movimientos en consola
-      console.log("🟨 Movimientos recibidos:", historial);
-  
+
       if (historial.length === 0) {
         alert('Este producto no tiene movimientos.');
       } else {
@@ -101,20 +92,20 @@ function StockList() {
           const fechaMadrid = DateTime.fromISO(m.timestamp).setZone('Europe/Madrid').toFormat('d/M/yyyy HH:mm:ss');
           const unidades = Math.abs(m.amount);
           const usuario = m.username ? ` por ${m.username}` : '';
-  
+
           let tipoMovimiento;
           let cantidades = '';
-  
+
           if (m.type.toLowerCase() === 'creación') {
             tipoMovimiento = 'Creación';
           } else {
             tipoMovimiento = m.amount > 0 ? 'Entrada' : 'Salida';
             cantidades = ` (${m.quantity_before} -> ${m.quantity_after})`;
           }
-  
+
           return `${tipoMovimiento} de ${unidades} unidad${unidades !== 1 ? 'es' : ''} el ${fechaMadrid}${cantidades}${usuario}`;
         }).join('\n');
-  
+
         alert(`Historial del producto:\n\n${texto}`);
       }
     } catch (err) {
@@ -122,13 +113,10 @@ function StockList() {
       alert('No se pudo cargar el historial');
     }
   };
-  
-  
-  
 
   const eliminarProducto = async (id) => {
     if (!window.confirm("¿Seguro que quieres eliminar este producto? Se eliminarán también sus movimientos.")) return;
-  
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/items/${id}`, {
@@ -139,7 +127,7 @@ function StockList() {
       });
 
       if (!res.ok) throw new Error("Error al eliminar");
-  
+
       setItems(items.filter(item => item.id !== id));
       alert("Producto eliminado correctamente");
     } catch (error) {
@@ -147,7 +135,6 @@ function StockList() {
       alert("Error al eliminar producto");
     }
   };
-  
 
   const añadirProducto = async () => {
     if (!newSku.trim() || !newEan13.trim() || !newQuantity.trim()) {
@@ -166,7 +153,7 @@ function StockList() {
       alert('Ya existe un producto con ese EAN13.');
       return;
     }
-  
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/items`, {
@@ -195,10 +182,13 @@ function StockList() {
       alert('No se pudo añadir el producto');
     }
   };
-  
+
+
   return (
     <div style={{ position: 'relative', padding: '20px', textAlign: 'center' }}>
-      <h2>Listado de Inventario</h2>
+      
+      <img src="/divain_team.png" alt="Divain Logo" style={{ width: "200px", marginBottom: "10px" }} />
+      <h2 style={{ fontSize: '26px', marginBottom: '25px' }}>Listado de Inventario</h2>
     
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
       <table style={{
@@ -257,27 +247,26 @@ function StockList() {
         </table>
       </div>
   
-      {/* Botón añadir */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+      {/* Botón añadir producto */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30 }}>
         <button
-          title="Añadir producto"
           onClick={() => setShowAddModal(true)}
           style={{
-            fontSize: 24,
-            width: 50,
-            height: 50,
-            borderRadius: '50%',
+            padding: '10px 20px',
+            fontSize: '18px',
             backgroundColor: '#4CAF50',
             color: 'white',
             border: 'none',
+            borderRadius: '6px',
             cursor: 'pointer',
-            userSelect: 'none',
-            boxShadow: '0 0 8px #4CAF50',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
           }}
         >
-          +
+          Añadir producto
         </button>
       </div>
+
   
       
       {showAddModal && (
@@ -344,6 +333,7 @@ function StockList() {
           </div>
         </div>
       )}
+
     </div>
   );
   

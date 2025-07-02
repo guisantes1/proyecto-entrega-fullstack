@@ -1,13 +1,22 @@
-body, div {
-  text-align: center;
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Solo aplicar fuente y centrado general al body */
+body {
   font-family: Arial, sans-serif;
 }
 
+/* Encabezados centrados */
 h1, h2 {
   text-align: center;
   margin-bottom: 20px;
 }
 
+/* Tablas centradas */
 table {
   margin: 0 auto;
   border-collapse: separate;

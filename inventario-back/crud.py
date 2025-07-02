@@ -3,7 +3,8 @@ from models import Item, Movement
 from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate, UserCreate
 from datetime import datetime
 from models import User
-from passlib.hash import bcrypt
+from security import pwd_context
+
 
 import pytz
 
@@ -109,13 +110,12 @@ def get_user_by_username(db, username: str):
     return db.query(User).filter(User.username == username).first()
 
 def create_user(db, user_data):
-    hashed_pw = bcrypt.hash(user_data.password)
+    hashed_pw = pwd_context.hash(user_data.password)
     user = User(username=user_data.username, hashed_password=hashed_pw)
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
-
 
 
 def reset_database(db: Session):
@@ -153,4 +153,18 @@ def reset_database(db: Session):
 
     db.commit()
     print("Database reset complete")  # <- Añade esto
+    
 
+def change_user_password(db: Session, user: User, old_password: str, new_password: str):
+    print(f"Intentando cambiar contraseña de: {user.username}")
+
+    # Recuperar user desde la sesión
+    user_in_db = db.query(User).filter(User.id == user.id).first()
+
+    if not pwd_context.verify(old_password, user_in_db.hashed_password):
+        return False, "Contraseña actual incorrecta"
+
+    user_in_db.hashed_password = pwd_context.hash(new_password)
+    db.commit()
+    print("✅ Contraseña cambiada en DB")
+    return True, "Contraseña actualizada correctamente"

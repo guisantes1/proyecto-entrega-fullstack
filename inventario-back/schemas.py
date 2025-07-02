@@ -48,8 +48,6 @@ class MovementOut(BaseModel):
 
 # ---------- USERS ----------
 
-from pydantic import BaseModel
-
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -61,3 +59,6 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True  
 
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str

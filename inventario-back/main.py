@@ -5,8 +5,8 @@ from database import SessionLocal, engine
 from models import Base, Item, Movement, User
 from auth import get_current_user
 import crud
-from crud import reset_database
-from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate, UserCreate
+from crud import reset_database, change_user_password
+from schemas import ItemOut, ItemCreate, ItemUpdate, MovementOut, MovementCreate, UserCreate, ChangePassword
 from datetime import datetime
 import pytz
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -138,4 +138,17 @@ def reset_all(
 
     reset_database(db)
     return {"detail": "Base de datos reseteada correctamente"}
+
+
+@app.post("/change-password")
+def change_password(
+    datos: ChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    success, message = crud.change_user_password(db, current_user, datos.old_password, datos.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"detail": message}
+
 
