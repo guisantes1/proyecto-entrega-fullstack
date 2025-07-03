@@ -28,6 +28,44 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !repeatPassword) {
+      alert("Rellena todos los campos");
+      return;
+    }
+    if (newPassword !== repeatPassword) {
+      alert("Las nuevas contraseñas no coinciden");
+      return;
+    }
+    if (newPassword === oldPassword) {
+      alert("La nueva contraseña no puede ser igual a la anterior");
+      return;
+    }
+  
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://127.0.0.1:8000/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      });
+  
+      if (!res.ok) throw new Error("Error al cambiar contraseña");
+  
+      alert("Contraseña cambiada con éxito");
+      setShowChangePassword(false);
+      setOldPassword('');
+      setNewPassword('');
+      setRepeatPassword('');
+    } catch (err) {
+      console.error(err);
+      alert("Error al cambiar la contraseña");
+    }
+  };
+
   return (
     <div className="App-container">
       
@@ -69,105 +107,45 @@ function App() {
         )}
         
         {showChangePassword && (
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 9999,
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              padding: 30,
-              borderRadius: 8,
-              minWidth: 350,
-              fontSize: 16,
-            }}>
-              <h3 style={{ marginBottom: 20 }}>Cambiar contraseña</h3>
-              
-              <label>Contraseña actual:</label>
+          <div className="change-password-overlay">
+            <div className="change-password-modal">
+              <h3 className="change-password-title">Cambiar contraseña</h3>
+
+              <label className="change-password-label">Contraseña actual:</label>
               <input
                 type="password"
                 value={oldPassword}
                 onChange={e => setOldPassword(e.target.value)}
-                style={{ width: '100%', marginBottom: 12, padding: 6 }}
+                className="change-password-input"
               />
 
-              <label>Nueva contraseña:</label>
+              <label className="change-password-label">Nueva contraseña:</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                style={{ width: '100%', marginBottom: 12, padding: 6 }}
+                className="change-password-input"
               />
 
-              <label>Repetir nueva contraseña:</label>
+              <label className="change-password-label">Repetir nueva contraseña:</label>
               <input
                 type="password"
                 value={repeatPassword}
                 onChange={e => setRepeatPassword(e.target.value)}
-                style={{ width: '100%', marginBottom: 20, padding: 6 }}
+                className="change-password-input"
               />
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="change-password-buttons">
                 <button
-                  onClick={() => {
-                    if (!oldPassword || !newPassword || !repeatPassword) {
-                      alert("Rellena todos los campos");
-                      return;
-                    }
-                    if (newPassword !== repeatPassword) {
-                      alert("Las nuevas contraseñas no coinciden");
-                      return;
-                    }
-                    if (newPassword === oldPassword) {
-                      alert("La nueva contraseña no puede ser igual a la anterior");
-                      return;
-                    }
-
-                    const token = localStorage.getItem("token");
-                    console.log("→ Intentando cambiar contraseña...");
-                    console.log("Token:", token);
-                    console.log("Payload enviado:", {
-                      old_password: oldPassword,
-                      new_password: newPassword,
-                    });
-
-                    fetch("http://127.0.0.1:8000/change-password", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({
-                        old_password: oldPassword,
-                        new_password: newPassword,
-                      }),
-                    })
-
-                      .then(res => {
-                        if (!res.ok) throw new Error("Error");
-                        return res.json();
-                      })
-                      .then(() => {
-                        alert("Contraseña cambiada con éxito");
-                        setShowChangePassword(false);
-                        setOldPassword('');
-                        setNewPassword('');
-                        setRepeatPassword('');
-                      })
-                      .catch(err => {
-                        console.error(err);
-                        alert("Error al cambiar la contraseña");
-                      });
-                  }}
-                  style={{ marginRight: 10, padding: '6px 12px' }}
+                  onClick={handleChangePassword}
+                  className="change-password-button"
                 >
                   Guardar
                 </button>
-                <button onClick={() => setShowChangePassword(false)} style={{ padding: '6px 12px' }}>
+                <button
+                  onClick={() => setShowChangePassword(false)}
+                  className="change-password-button"
+                >
                   Cancelar
                 </button>
               </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DateTime } from 'luxon';
 import './StockList.css';
 
@@ -53,12 +53,7 @@ function StockList() {
     return response;
   }
 
-
-  useEffect(() => {
-    cargarItems();
-  }, []);
-
-  const cargarItems = async () => {
+  const cargarItems = useCallback(async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/items`);
       const data = await res.json();
@@ -69,7 +64,12 @@ function StockList() {
         alert('Error al cargar items. Mira la consola.');
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargarItems();
+  }, [cargarItems]);
+
 
   const actualizarCantidad = async (id, cantidadActual) => {
     const nuevaCantidad = prompt('Introduce la nueva cantidad:', cantidadActual);

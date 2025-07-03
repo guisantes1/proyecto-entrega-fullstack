@@ -20,13 +20,14 @@ from schemas import (
 )
 
 # -------------------------
-# Inicialización y Config
+# Inicialización y Configuración de la base de datos y app
 # -------------------------
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)  # Crear tablas en la base de datos si no existen
 
 with SessionLocal() as db:
     print("Checking DB tables...")
+    # Comprobar si las tablas tienen datos, si no, resetear base de datos (solo desarrollo/testing)
     if not (db.query(Item).first() and db.query(User).first() and db.query(Movement).first()):
         print("Tables empty or incomplete, resetting database")
         reset_database(db)
@@ -34,14 +35,16 @@ with SessionLocal() as db:
     else:
         print("DB tables already have data")
 
-app = FastAPI()
+app = FastAPI()  # Crear instancia de la aplicación FastAPI
 
-SECRET_KEY = "clave-super-secreta"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# Variables para el manejo del token JWT
+SECRET_KEY = "clave-super-secreta"  # Clave secreta para firmar los tokens JWT
+ALGORITHM = "HS256"  # Algoritmo de cifrado para JWT
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Duración de vida del token en minutos
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # Esquema OAuth2 para login
 
+# Configuración CORS para permitir peticiones desde frontend en localhost:3000
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -49,39 +52,40 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # Orígenes permitidos
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Permitir todos los métodos HTTP
+    allow_headers=["*"],  # Permitir todos los headers
 )
 
 # -------------------------
-# Utilidades
+# Funciones Utilitarias
 # -------------------------
 
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
+    expire = datetime.utcnow() + expires_delta  # Calcular expiración token
     to_encode.update({"exp": expire})
+    # Generar token firmado con clave secreta y algoritmo
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def get_db():
-    db = SessionLocal()
+    db = SessionLocal()  # Crear sesión de base de datos
     try:
-        yield db
+        yield db  # Proveer sesión para usar en endpoints
     finally:
-        db.close()
+        db.close()  # Cerrar sesión después de su uso
 
 # -------------------------
-# Manejo Global de Errores
+# Manejo global de errores no controlados
 # -------------------------
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    # Aquí podemos loguear el error exc si queremos
+    # Aquí se puede loguear el error con exc si se desea
     return JSONResponse(
         status_code=500,
-        content={"detail": "Error interno del servidor."}
+        content={"detail": "Error interno del servidor."}  # Mensaje genérico para cliente
     )
 
 # -------------------------
@@ -90,68 +94,63 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 @app.post("/login")
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    form_data: OAuth2PasswordRequestForm = Depends(),  # Obtener datos de formulario login
     db: Session = Depends(get_db)
 ):
-    user = crud.get_user_by_username(db, form_data.username)
-    if not user or not user.verify_password(form_data.password):
+    user = crud.get_user_by_username(db, form_data.username)  # Buscar usuario en DB
+    if not user or not user.verify_password(form_data.password):  # Validar password
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
-    # Reset DB en caso necesario (solo para desarrollo/testing)
-    tablas_vacias = (
-        not db.query(Item).first() or
-        not db.query(User).first() or
-        not db.query(Movement).first()
-    )
-    if tablas_vacias:
-        reset_database(db)
+    # Código comentado para resetear base datos solo en testing
+    # tablas_vacias = (
+    #     not db.query(Item).first() or
+    #     not db.query(User).first() or
+    #     not db.query(Movement).first()
+    # )
+    # if tablas_vacias:
+    #     reset_database(db)
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # Duración token
     token = create_access_token(
-        data={"sub": user.username},
+        data={"sub": user.username},  # Campo "sub" con el username
         expires_delta=access_token_expires
     )
-    return {"access_token": token, "token_type": "bearer"}
-
+    return {"access_token": token, "token_type": "bearer"}  # Devolver token JWT
 
 @app.get("/items", response_model=list[ItemOut])
 def read_items(db: Session = Depends(get_db)):
-    return crud.get_items(db)
-
+    return crud.get_items(db)  # Obtener todos los productos
 
 @app.post("/items", response_model=ItemOut)
 def create_item(
     item: ItemCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)  # Requiere autenticación
 ):
     nuevo_item, error = crud.create_item(db, item)
     if error:
         raise HTTPException(status_code=400, detail=error)
-    return nuevo_item
-
+    return nuevo_item  # Crear nuevo producto
 
 @app.put("/items/{item_id}", response_model=ItemOut)
 def update_item(
     item_id: int,
     item: ItemUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)  # Requiere autenticación
 ):
     updated = crud.update_item_quantity(db, item_id, item, user=current_user.username)
     if not updated:
         raise HTTPException(status_code=404, detail="Item not found")
-    return updated
-
+    return updated  # Actualizar cantidad producto
 
 @app.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(
     item_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)  # Requiere autenticación
 ):
-    # Ya no se restringe a admin, cualquier usuario autenticado puede eliminar
-
+    # Eliminar producto y sus movimientos asociados
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item no encontrado")
@@ -164,40 +163,25 @@ def delete_item(
         raise HTTPException(status_code=500, detail="Error al eliminar el item")
     return {"detail": "Item eliminado"}
 
-
 @app.get("/movements", response_model=list[MovementOut])
 def read_movements(db: Session = Depends(get_db)):
-    return crud.get_movements(db)
-
+    return crud.get_movements(db)  # Obtener historial movimientos
 
 @app.post("/movements", response_model=MovementOut)
 def create_movement(
     movement: MovementCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)  # Requiere autenticación
 ):
-    return crud.create_movement(db, movement)
-
-
-@app.post("/reset")
-def reset_all(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.username != "admin":
-        raise HTTPException(status_code=403, detail="No autorizado")
-
-    reset_database(db)
-    return {"detail": "Base de datos reseteada correctamente"}
-
+    return crud.create_movement(db, movement)  # Crear movimiento nuevo
 
 @app.post("/change-password")
 def change_password(
     datos: ChangePassword,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)  # Requiere autenticación
 ):
     success, message = crud.change_user_password(db, current_user, datos.old_password, datos.new_password)
     if not success:
         raise HTTPException(status_code=400, detail=message)
-    return {"detail": message}
+    return {"detail": message}  # Cambiar contraseña de usuario
